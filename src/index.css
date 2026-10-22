@@ -1,0 +1,222 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "SF Pro Text", "Noto Sans SC", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --font-serif: "Iowan Old Style", "Baskerville", "Noto Serif SC",
+    "Songti SC", "STSong", serif;
+}
+
+:root {
+  --canvas: #f7f4ec;
+  --sidebar: #edf4f6;
+  --surface: #fffcf5;
+  --surface-soft: #f4f2ea;
+  --surface-strong: #e8ece7;
+  --ink: #1a222c;
+  --ink-soft: #36414b;
+  --muted: #68747d;
+  --muted-soft: #8c989f;
+  --hairline: #dce3df;
+  --liquid-border: rgba(91, 113, 119, 0.24);
+  --blue: #79b4d1;
+  --blue-strong: #3d7799;
+  --blue-soft: #dcebf1;
+  --sidebar-active: #d9e8ee;
+  --sidebar-hover: #e4edf0;
+  --gold: #c9a45c;
+  --gold-hover: #b68e45;
+  --gold-soft: rgba(201, 164, 92, 0.14);
+  --gold-line: rgba(201, 164, 92, 0.52);
+  --success: #5f9b78;
+  --danger: #a44e48;
+  --danger-soft: rgba(164, 78, 72, 0.1);
+  --shadow-soft: 0 14px 45px rgba(43, 65, 73, 0.08);
+  --shadow-float: 0 16px 50px rgba(30, 50, 59, 0.13);
+  --composer-shadow: 0 16px 40px rgba(50, 70, 76, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.7) inset;
+}
+
+[data-theme="dark"] {
+  --canvas: #111820;
+  --sidebar: #151f28;
+  --surface: #19242e;
+  --surface-soft: #16212a;
+  --surface-strong: #24323c;
+  --ink: #f3efe4;
+  --ink-soft: #d8d8d0;
+  --muted: #a0adb5;
+  --muted-soft: #77868f;
+  --hairline: #2a3943;
+  --liquid-border: rgba(161, 190, 201, 0.19);
+  --blue: #8fc4df;
+  --blue-strong: #9dd0e7;
+  --blue-soft: rgba(111, 170, 199, 0.16);
+  --sidebar-active: #1d303b;
+  --sidebar-hover: #1a2933;
+  --gold: #dfc27a;
+  --gold-hover: #ebd18f;
+  --gold-soft: rgba(223, 194, 122, 0.12);
+  --gold-line: rgba(223, 194, 122, 0.48);
+  --success: #79b792;
+  --danger: #e18b83;
+  --danger-soft: rgba(225, 139, 131, 0.1);
+  --shadow-soft: 0 16px 50px rgba(0, 0, 0, 0.18);
+  --shadow-float: 0 18px 55px rgba(0, 0, 0, 0.3);
+  --composer-shadow: 0 18px 48px rgba(0, 0, 0, 0.26),
+    0 1px 0 rgba(255, 255, 255, 0.025) inset;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+textarea,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+::selection {
+  background: var(--gold-soft);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--blue-strong);
+  outline-offset: 3px;
+}
+
+.app-frame {
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 80% -10%, var(--gold-soft), transparent 28%),
+    var(--canvas);
+}
+
+.chat-scroll-area {
+  scrollbar-color: color-mix(in srgb, var(--muted-soft) 35%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+.typing-dots {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 0;
+}
+
+.typing-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--gold);
+  animation: dot-pulse 1.25s ease-in-out infinite;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.stream-caret {
+  display: inline-block;
+  width: 5px;
+  height: 16px;
+  margin-left: 3px;
+  transform: translateY(2px);
+  border-radius: 2px;
+  background: var(--gold);
+  animation: caret-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dot-pulse {
+  0%,
+  60%,
+  100% {
+    opacity: 0.28;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes caret-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
