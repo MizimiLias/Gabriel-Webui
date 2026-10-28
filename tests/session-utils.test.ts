@@ -19,6 +19,8 @@ function session(
     updated_at: updatedAt,
     message_count: 2,
     last_message_preview: preview,
+    persona_id: null,
+    persona_name: null,
   }
 }
 

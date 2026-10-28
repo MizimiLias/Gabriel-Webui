@@ -2,8 +2,9 @@
 
 React 19 + TypeScript + Vite frontend for the Gabriel Agent backend. The
 interface provides streaming chat, persistent conversation history, generated
-session titles, inline renaming, local search, responsive navigation, and
-light/dark/system themes with Chinese and English copy.
+session titles, inline renaming, persona management and selection, local
+search, responsive navigation, and light/dark/system themes with Chinese and
+English copy.
 
 ## Requirements
 

@@ -23,6 +23,8 @@ const session: ChatSessionSummary = {
   updated_at: '2026-10-22T10:00:00+08:00',
   message_count: 2,
   last_message_preview: 'A useful answer',
+  persona_id: null,
+  persona_name: null,
 }
 
 function LocationProbe() {
@@ -150,5 +152,14 @@ describe('Sidebar', () => {
     renderSidebar()
     await user.type(screen.getByRole('textbox', { name: '搜索会话' }), 'absent')
     expect(await screen.findByText('没有匹配的会话')).toBeInTheDocument()
+  })
+
+  it('opens persona management from the sidebar', async () => {
+    const user = userEvent.setup()
+    renderSidebar()
+
+    await user.click(screen.getByRole('button', { name: '人格' }))
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/personas')
   })
 })

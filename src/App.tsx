@@ -1,9 +1,14 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { ChatView } from './components/ChatView'
 import { Sidebar } from './components/Sidebar'
 import { getSessions } from './lib/api'
+
+const PersonaManager = lazy(async () => {
+  const module = await import('./components/PersonaManager')
+  return { default: module.PersonaManager }
+})
 
 function App() {
   const navigate = useNavigate()
@@ -71,6 +76,23 @@ function App() {
                 sidebarCollapsed={collapsed}
                 onOpenSidebar={openSidebar}
               />
+            }
+          />
+          <Route
+            path="/personas"
+            element={
+              <Suspense
+                fallback={
+                  <div className="flex h-dvh flex-1 items-center justify-center bg-[var(--canvas)]">
+                    <div className="size-7 animate-spin rounded-full border-2 border-[var(--surface-strong)] border-t-[var(--gold)]" />
+                  </div>
+                }
+              >
+                <PersonaManager
+                  sidebarCollapsed={collapsed}
+                  onOpenSidebar={openSidebar}
+                />
+              </Suspense>
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -67,6 +67,15 @@
     0 1px 0 rgba(255, 255, 255, 0.025) inset;
 }
 
+/* 全局字号唯一入口：调整 html font-size 即可整体缩放。
+   说明：Tailwind 的 text-xs/sm/base（含 text-[0.6875rem]/text-[0.8125rem]）
+   基于 rem，会跟随 html 缩放；此前 text-[11px]/text-[13px] 为 px 写死，
+   不跟随 body/html 字号，这就是“改了没效果”的原因，已统一为 rem。
+   消息正文入口：MarkdownMessage 的 text-sm；侧栏/按钮已改为 rem。 */
+html {
+  font-size: 16px;
+}
+
 * {
   box-sizing: border-box;
 }

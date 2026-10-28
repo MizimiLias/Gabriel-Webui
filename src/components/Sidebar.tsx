@@ -11,9 +11,10 @@ import {
   Search,
   Sun,
   Trash2,
+  UserRound,
   X,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { useAppSettings, type ThemeMode } from '../contexts/app-settings'
 import { deleteSession, renameSession } from '../lib/api'
@@ -63,6 +64,7 @@ export function Sidebar({
 }: SidebarProps) {
   const { t, language, setLanguage, themeMode, setThemeMode } = useAppSettings()
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
@@ -211,7 +213,7 @@ export function Sidebar({
           <div className="px-3">
             <button
               type="button"
-              className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-[var(--gold)]/65 bg-[var(--gold)] px-3 text-[13px] font-semibold text-slate-900 shadow-[0_6px_18px_rgba(145,110,47,0.15)] transition-colors hover:bg-[var(--gold-hover)] active:translate-y-px"
+              className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-[var(--gold)]/65 bg-[var(--gold)] px-3 text-[0.8125rem] font-semibold text-slate-900 shadow-[0_6px_18px_rgba(145,110,47,0.15)] transition-colors hover:bg-[var(--gold-hover)] active:translate-y-px"
               onClick={() => {
                 onNewChat()
                 onCloseMobile()
@@ -230,7 +232,7 @@ export function Sidebar({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={t('searchPlaceholder')}
-              className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--ink)] outline-none placeholder:text-[var(--muted-soft)]"
+              className="min-w-0 flex-1 bg-transparent text-[0.8125rem] text-[var(--ink)] outline-none placeholder:text-[var(--muted-soft)]"
               aria-label={t('searchPlaceholder')}
             />
             {search && (
@@ -245,7 +247,7 @@ export function Sidebar({
             )}
           </div>
 
-          <div className="flex items-center justify-between px-4 pb-2 pt-3 text-[11px] font-medium uppercase tracking-wider text-[var(--muted-soft)]">
+          <div className="flex items-center justify-between px-4 pb-2 pt-3 text-[0.6875rem] font-medium uppercase tracking-wider text-[var(--muted-soft)]">
             <span>{t('conversationHistory')}</span>
             <span className="tabular-nums">{sessions.length || ''}</span>
           </div>
@@ -290,7 +292,7 @@ export function Sidebar({
               !isError &&
               groups.map((group) => (
                 <section key={group.key} className="mb-3">
-                  <h2 className="px-2.5 pb-1.5 pt-2 text-[11px] font-medium text-[var(--muted-soft)]">
+                  <h2 className="px-2.5 pb-1.5 pt-2 text-[0.6875rem] font-medium text-[var(--muted-soft)]">
                     {t(group.key)}
                   </h2>
                   <div className="space-y-0.5">
@@ -327,7 +329,7 @@ export function Sidebar({
                                 value={editingTitle}
                                 onChange={(event) => setEditingTitle(event.target.value)}
                                 maxLength={80}
-                                className="min-w-0 flex-1 rounded-lg border border-[var(--liquid-border)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--blue-strong)]"
+                                className="min-w-0 flex-1 rounded-lg border border-[var(--liquid-border)] bg-[var(--surface)] px-2.5 py-1.5 text-[0.8125rem] text-[var(--ink)] outline-none focus:border-[var(--blue-strong)]"
                                 aria-label={t('rename')}
                                 disabled={renaming}
                                 onKeyDown={(event) => {
@@ -355,14 +357,14 @@ export function Sidebar({
                             >
                               <span className="min-w-0 flex-1">
                                 <span className="flex items-baseline gap-2">
-                                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-5">
+                                  <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-medium leading-5">
                                     {session.title || t('newChat')}
                                   </span>
-                                  <span className="shrink-0 text-[11px] font-normal text-[var(--muted-soft)]">
+                                  <span className="shrink-0 text-[0.6875rem] font-normal text-[var(--muted-soft)]">
                                     {formatRelativeTime(session.updated_at, language)}
                                   </span>
                                 </span>
-                                <span className="mt-0.5 block truncate text-[11px] leading-4 text-[var(--muted-soft)]">
+                                <span className="mt-0.5 block truncate text-[0.6875rem] leading-4 text-[var(--muted-soft)]">
                                   {session.last_message_preview || '—'}
                                 </span>
                               </span>
@@ -437,8 +439,26 @@ export function Sidebar({
           </nav>
 
           <div className="border-t border-[var(--hairline)]/70 px-3 py-3">
+            <button
+              type="button"
+              className={clsx(
+                'mb-2 flex min-h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-[0.8125rem] font-medium transition-colors',
+                location.pathname === '/personas'
+                  ? 'bg-[var(--sidebar-active)] text-[var(--ink)]'
+                  : 'text-[var(--muted)] hover:bg-[var(--surface)]/60 hover:text-[var(--ink)]',
+              )}
+              onClick={() => {
+                navigate('/personas')
+                onCloseMobile()
+                setOpenMenuId(null)
+              }}
+              aria-current={location.pathname === '/personas' ? 'page' : undefined}
+            >
+              <UserRound size={15} />
+              {t('personas')}
+            </button>
             <div className="flex min-h-8 items-center justify-between gap-3">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--muted-soft)]">{t('theme')}</span>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-wider text-[var(--muted-soft)]">{t('theme')}</span>
               <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-[var(--liquid-border)]/70 bg-[var(--surface)]/50 p-0.5">
                 {themes.map((theme) => {
                   const Icon = theme.icon
@@ -462,12 +482,12 @@ export function Sidebar({
               </div>
             </div>
             <div className="flex min-h-8 items-center justify-between gap-3">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--muted-soft)]">{t('language')}</span>
+              <span className="text-[0.6875rem] font-medium uppercase tracking-wider text-[var(--muted-soft)]">{t('language')}</span>
               <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-[var(--liquid-border)]/70 bg-[var(--surface)]/50 p-0.5">
                 <button
                   type="button"
                   className={clsx(
-                    'inline-flex h-7 min-w-12 items-center justify-center rounded-md px-2.5 text-[11px] font-medium leading-none transition-colors hover:text-[var(--ink)]',
+                    'inline-flex h-7 min-w-12 items-center justify-center rounded-md px-2.5 text-[0.6875rem] font-medium leading-none transition-colors hover:text-[var(--ink)]',
                     language === 'zh' && 'bg-[var(--surface)] text-[var(--ink)] shadow-sm',
                   )}
                   onClick={() => setLanguage('zh')}
@@ -478,7 +498,7 @@ export function Sidebar({
                 <button
                   type="button"
                   className={clsx(
-                    'inline-flex h-7 min-w-12 items-center justify-center rounded-md px-2.5 text-[11px] font-medium leading-none transition-colors hover:text-[var(--ink)]',
+                    'inline-flex h-7 min-w-12 items-center justify-center rounded-md px-2.5 text-[0.6875rem] font-medium leading-none transition-colors hover:text-[var(--ink)]',
                     language === 'en' && 'bg-[var(--surface)] text-[var(--ink)] shadow-sm',
                   )}
                   onClick={() => setLanguage('en')}

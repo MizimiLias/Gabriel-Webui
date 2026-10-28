@@ -21,6 +21,8 @@ import type {
 import { Composer } from './Composer'
 import { GabrielAvatar } from './GabrielAvatar'
 import { MarkdownMessage } from './MarkdownMessage'
+import { PersonaSelector } from './PersonaSelector'
+import { ThinkingBlock } from './ThinkingBlock'
 
 interface ChatViewProps {
   sessionId?: string
@@ -60,6 +62,7 @@ export function ChatView({
   const [retryPrompt, setRetryPrompt] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [generatedTitle, setGeneratedTitle] = useState<string | null>(null)
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(null)
   const [isNearBottom, setIsNearBottom] = useState(true)
   const requestRef = useRef<AbortController | null>(null)
   const stopRequestedRef = useRef(false)
@@ -81,6 +84,14 @@ export function ChatView({
     () => localMessages ?? historyQuery.data?.messages ?? [],
     [localMessages, historyQuery.data?.messages],
   )
+  const lastAssistantIndex = useMemo(() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (messages[index]?.role === 'assistant') {
+        return index
+      }
+    }
+    return -1
+  }, [messages])
   const activeSummary = sessions.find((session) => session.session_id === sessionId)
   const title =
     activeSummary?.title ??
@@ -146,9 +157,11 @@ export function ChatView({
       role: 'assistant',
       content: '',
       created_at: now,
+      reasoning: '',
     }
     let assistantId = assistantMessage.id
     let assistantContent = ''
+    let reasoningContent = ''
     let doneEvent: StreamDoneEvent | undefined
     const controller = new AbortController()
 
@@ -167,6 +180,7 @@ export function ChatView({
       await streamChat({
         sessionId: targetSessionId,
         message: prompt,
+        personaId: existingSessionId ? undefined : selectedPersonaId,
         signal: controller.signal,
         handlers: {
           onStart: (event) => {
@@ -185,6 +199,16 @@ export function ChatView({
               (current ?? []).map((message) =>
                 message.id === assistantId
                   ? { ...message, content: message.content + delta }
+                  : message,
+              ),
+            )
+          },
+          onReasoning: (delta) => {
+            reasoningContent += delta
+            setMessages((current) =>
+              (current ?? []).map((message) =>
+                message.id === assistantId
+                  ? { ...message, reasoning: (message.reasoning ?? '') + delta }
                   : message,
               ),
             )
@@ -215,6 +239,7 @@ export function ChatView({
         role: 'assistant',
         content: assistantContent,
         created_at: doneEvent.created_at,
+        ...(reasoningContent ? { reasoning: reasoningContent } : {}),
       }
       const finalMessages = [...baseMessages, userMessage, finalAssistant]
       const finalTitle = doneEvent.title
@@ -332,6 +357,7 @@ export function ChatView({
               <p className="mt-3 max-w-md text-sm leading-7 text-[var(--muted)]">
                 {t('greetingHint')}
               </p>
+              <PersonaSelector value={selectedPersonaId} onChange={setSelectedPersonaId} />
             </section>
           )}
 
@@ -390,7 +416,7 @@ export function ChatView({
 
           {!notFound &&
             !historyFailed &&
-            messages.map((message) =>
+            messages.map((message, index) =>
               message.role === 'user' ? (
                 <article
                   key={message.id}
@@ -411,6 +437,12 @@ export function ChatView({
                     <h2 className="mb-2 mt-px text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
                       {t('assistantLabel')}
                     </h2>
+                    {message.reasoning ? (
+                      <ThinkingBlock
+                        reasoning={message.reasoning}
+                        isStreaming={isStreaming && index === lastAssistantIndex}
+                      />
+                    ) : null}
                     {message.content ? (
                       <MarkdownMessage content={message.content} />
                     ) : (
@@ -420,9 +452,11 @@ export function ChatView({
                         <span />
                       </div>
                     )}
-                    {isStreaming && message.content && (
-                      <span className="stream-caret" aria-hidden="true" />
-                    )}
+                    {isStreaming &&
+                      index === lastAssistantIndex &&
+                      message.content && (
+                        <span className="stream-caret" aria-hidden="true" />
+                      )}
                   </div>
                 </article>
               ),

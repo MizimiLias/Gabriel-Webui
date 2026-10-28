@@ -2,6 +2,10 @@ import type {
   ChatHistoryResponse,
   ChatSessionListResponse,
   ChatSessionSummary,
+  PersonaCreateInput,
+  PersonaDetail,
+  PersonaListResponse,
+  PersonaUpdateInput,
   ProblemDetail,
   StreamDoneEvent,
   StreamErrorEvent,
@@ -15,16 +19,23 @@ export class ApiError extends Error {
   readonly status: number
   readonly requestId?: string
   readonly code?: string
+  readonly problemType?: string
 
   constructor(
     message: string,
-    options: { status?: number; requestId?: string; code?: string } = {},
+    options: {
+      status?: number
+      requestId?: string
+      code?: string
+      problemType?: string
+    } = {},
   ) {
     super(message)
     this.name = 'ApiError'
     this.status = options.status ?? 0
     this.requestId = options.requestId
     this.code = options.code
+    this.problemType = options.problemType
   }
 }
 
@@ -40,6 +51,7 @@ async function responseError(response: Response): Promise<ApiError> {
     {
       status: response.status,
       requestId: problem?.request_id,
+      problemType: problem?.type,
     },
   )
 }
@@ -87,15 +99,74 @@ export async function deleteSession(sessionId: string): Promise<void> {
   }
 }
 
+export async function listPersonas(): Promise<PersonaListResponse> {
+  return requestJson<PersonaListResponse>('/personas')
+}
+
+export async function getPersona(personaId: string): Promise<PersonaDetail> {
+  return requestJson<PersonaDetail>(`/personas/${personaId}`)
+}
+
+function serializeMessage(message: {
+  id?: string
+  role: 'user' | 'assistant'
+  content: string
+}) {
+  return {
+    ...(message.id ? { id: message.id } : {}),
+    role: message.role,
+    content: message.content,
+  }
+}
+
+export async function createPersona(input: PersonaCreateInput): Promise<PersonaDetail> {
+  return requestJson<PersonaDetail>('/personas', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: input.name,
+      description: input.description,
+      system_prompt: input.system_prompt,
+      messages: input.messages.map(({ role, content }) => ({ role, content })),
+    }),
+  })
+}
+
+export async function updatePersona(
+  personaId: string,
+  input: PersonaUpdateInput,
+): Promise<PersonaDetail> {
+  return requestJson<PersonaDetail>(`/personas/${personaId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      name: input.name,
+      description: input.description,
+      system_prompt: input.system_prompt,
+      messages: input.messages.map(serializeMessage),
+    }),
+  })
+}
+
+export async function deletePersona(personaId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/personas/${personaId}`, {
+    method: 'DELETE',
+    headers: { Accept: 'application/json' },
+  })
+  if (!response.ok) {
+    throw await responseError(response)
+  }
+}
+
 interface StreamHandlers {
   onStart: (event: StreamStartEvent) => void
   onToken: (delta: string) => void
+  onReasoning?: (delta: string) => void
   onDone: (event: StreamDoneEvent) => void
 }
 
 interface StreamChatOptions {
   sessionId: string
   message: string
+  personaId?: string | null
   signal: AbortSignal
   handlers: StreamHandlers
 }
@@ -103,6 +174,7 @@ interface StreamChatOptions {
 export async function streamChat({
   sessionId,
   message,
+  personaId,
   signal,
   handlers,
 }: StreamChatOptions): Promise<void> {
@@ -112,7 +184,11 @@ export async function streamChat({
       Accept: 'text/event-stream',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ session_id: sessionId, message }),
+    body: JSON.stringify({
+      session_id: sessionId,
+      message,
+      ...(personaId ? { persona_id: personaId } : {}),
+    }),
     signal,
   })
 
@@ -146,6 +222,8 @@ export async function streamChat({
         handlers.onStart(JSON.parse(event.data) as StreamStartEvent)
       } else if (event.event === 'token') {
         handlers.onToken((JSON.parse(event.data) as { delta: string }).delta)
+      } else if (event.event === 'reasoning') {
+        handlers.onReasoning?.((JSON.parse(event.data) as { delta: string }).delta)
       } else if (event.event === 'done') {
         receivedDone = true
         handlers.onDone(JSON.parse(event.data) as StreamDoneEvent)
