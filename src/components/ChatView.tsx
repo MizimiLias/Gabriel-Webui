@@ -12,7 +12,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { useAppSettings } from '../contexts/app-settings'
 import { ApiError, getHistory, streamChat } from '../lib/api'
+import { appendTextDelta, imageParts, textFromParts } from '../lib/content'
 import type {
+  ContentPart,
   ChatHistoryResponse,
   ChatMessage,
   ChatSessionSummary,
@@ -44,6 +46,30 @@ const statePageClass =
 const stateIconClass =
   'inline-flex size-12 items-center justify-center rounded-xl border border-[var(--liquid-border)] bg-[var(--surface-soft)] text-[var(--muted)]'
 
+function UserPartsContent({ parts }: { parts: ContentPart[] }) {
+  const text = textFromParts(parts)
+  const images = imageParts(parts)
+  return (
+    <div className="space-y-2">
+      {text && <p className="whitespace-pre-wrap break-words">{text}</p>}
+      {images.map((part) => (
+        <img
+          key={part.image_url.url}
+          src={part.image_url.url}
+          alt=""
+          className="max-h-80 w-auto max-w-full rounded-xl border border-[var(--blue)]/20 object-contain"
+          loading="lazy"
+        />
+      ))}
+    </div>
+  )
+}
+
+function AssistantPartsContent({ parts }: { parts: ContentPart[] }) {
+  const text = textFromParts(parts)
+  return text ? <MarkdownMessage content={text} /> : null
+}
+
 export function ChatView({
   sessionId: routeSessionId,
   sessions,
@@ -57,9 +83,10 @@ export function ChatView({
   const queryClient = useQueryClient()
   const [localMessages, setMessages] = useState<ChatMessage[] | null>(null)
   const [draft, setDraft] = useState('')
+  const [imageUrls, setImageUrls] = useState<string[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamError, setStreamError] = useState<string | null>(null)
-  const [retryPrompt, setRetryPrompt] = useState<string | null>(null)
+  const [retryParts, setRetryParts] = useState<ContentPart[] | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [generatedTitle, setGeneratedTitle] = useState<string | null>(null)
   const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(null)
@@ -136,26 +163,27 @@ export function ChatView({
   }
 
   const sendPrompt = async (
-    prompt: string,
+    parts: ContentPart[],
     baseMessages: ChatMessage[],
     existingSessionId?: string,
   ) => {
-    if (isStreaming || !prompt.trim()) {
+    if (isStreaming || parts.length === 0) {
       return
     }
 
+    const prompt = textFromParts(parts)
     const targetSessionId = existingSessionId ?? crypto.randomUUID()
     const now = new Date().toISOString()
     const userMessage: ChatMessage = {
       id: temporaryId('user'),
       role: 'user',
-      content: prompt,
+      parts,
       created_at: now,
     }
     const assistantMessage: ChatMessage = {
       id: temporaryId('assistant'),
       role: 'assistant',
-      content: '',
+      parts: [],
       created_at: now,
       reasoning: '',
     }
@@ -169,8 +197,9 @@ export function ChatView({
     stopRequestedRef.current = false
     setMessages([...baseMessages, userMessage, assistantMessage])
     setDraft('')
+    setImageUrls([])
     setStreamError(null)
-    setRetryPrompt(null)
+    setRetryParts(null)
     setNotice(null)
     setGeneratedTitle(null)
     setIsNearBottom(true)
@@ -179,7 +208,7 @@ export function ChatView({
     try {
       await streamChat({
         sessionId: targetSessionId,
-        message: prompt,
+        parts,
         personaId: existingSessionId ? undefined : selectedPersonaId,
         signal: controller.signal,
         handlers: {
@@ -198,7 +227,7 @@ export function ChatView({
             setMessages((current) =>
               (current ?? []).map((message) =>
                 message.id === assistantId
-                  ? { ...message, content: message.content + delta }
+                  ? { ...message, parts: appendTextDelta(message.parts, delta) }
                   : message,
               ),
             )
@@ -237,7 +266,7 @@ export function ChatView({
       const finalAssistant: ChatMessage = {
         id: doneEvent.message_id,
         role: 'assistant',
-        content: assistantContent,
+        parts: [{ type: 'text', text: assistantContent }],
         created_at: doneEvent.created_at,
         ...(reasoningContent ? { reasoning: reasoningContent } : {}),
       }
@@ -264,6 +293,7 @@ export function ChatView({
       ) {
         setMessages(baseMessages)
         setDraft(prompt)
+        setImageUrls(imageParts(parts).map((part) => part.image_url.url))
         setNotice(t('stopped'))
       } else {
         setStreamError(
@@ -271,7 +301,7 @@ export function ChatView({
             ? error.message
             : t('responseError'),
         )
-        setRetryPrompt(prompt)
+        setRetryParts(parts)
       }
       setIsStreaming(false)
     } finally {
@@ -283,10 +313,19 @@ export function ChatView({
 
   const submitDraft = () => {
     const prompt = draft.trim()
-    if (!prompt || isStreaming) {
+    if ((!prompt && imageUrls.length === 0) || isStreaming) {
       return
     }
-    void sendPrompt(prompt, messages, sessionId)
+    const parts: ContentPart[] = []
+    if (prompt) {
+      parts.push({ type: 'text', text: prompt })
+    }
+    parts.push(
+      ...imageUrls.map(
+        (url): ContentPart => ({ type: 'image_url', image_url: { url } }),
+      ),
+    )
+    void sendPrompt(parts, messages, sessionId)
   }
 
   const stopGeneration = () => {
@@ -298,15 +337,14 @@ export function ChatView({
   }
 
   const retry = () => {
-    if (!retryPrompt || isStreaming) {
+    if (!retryParts || isStreaming) {
       return
     }
     const baseMessages = messages.slice(0, -2)
-    const prompt = retryPrompt
     setMessages(baseMessages)
     setStreamError(null)
-    setRetryPrompt(null)
-    void sendPrompt(prompt, baseMessages, sessionId)
+    setRetryParts(null)
+    void sendPrompt(retryParts, baseMessages, sessionId)
   }
 
   const showLoading =
@@ -423,8 +461,8 @@ export function ChatView({
                   className="mb-9 flex animate-[rise-in_220ms_ease_both] justify-end"
                 >
                   <h2 className="sr-only">{t('you')}</h2>
-                  <div className="max-w-[78%] whitespace-pre-wrap break-words rounded-[18px_18px_5px_18px] border border-[var(--blue)]/30 bg-[var(--blue-soft)] px-4 py-3 text-sm leading-6 text-[var(--ink-soft)] shadow-[0_5px_18px_rgba(70,111,126,0.055)]">
-                    {message.content}
+                  <div className="max-w-[78%] rounded-[18px_18px_5px_18px] border border-[var(--blue)]/30 bg-[var(--blue-soft)] px-4 py-3 text-sm leading-6 text-[var(--ink-soft)] shadow-[0_5px_18px_rgba(70,111,126,0.055)]">
+                    <UserPartsContent parts={message.parts} />
                   </div>
                 </article>
               ) : (
@@ -443,8 +481,8 @@ export function ChatView({
                         isStreaming={isStreaming && index === lastAssistantIndex}
                       />
                     ) : null}
-                    {message.content ? (
-                      <MarkdownMessage content={message.content} />
+                    {textFromParts(message.parts) ? (
+                      <AssistantPartsContent parts={message.parts} />
                     ) : (
                       <div className="typing-dots" aria-label={t('generating')}>
                         <span />
@@ -454,7 +492,7 @@ export function ChatView({
                     )}
                     {isStreaming &&
                       index === lastAssistantIndex &&
-                      message.content && (
+                      textFromParts(message.parts) && (
                         <span className="stream-caret" aria-hidden="true" />
                       )}
                   </div>
@@ -509,6 +547,11 @@ export function ChatView({
         <Composer
           value={draft}
           onChange={setDraft}
+          imageUrls={imageUrls}
+          onAddImageUrl={(url) => setImageUrls((current) => [...current, url])}
+          onRemoveImageUrl={(url) =>
+            setImageUrls((current) => current.filter((item) => item !== url))
+          }
           onSend={submitDraft}
           onStop={stopGeneration}
           isStreaming={isStreaming}

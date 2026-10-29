@@ -24,7 +24,7 @@ describe('persona API client', () => {
 
     await streamChat({
       sessionId: 'session-one',
-      message: 'Hello',
+      parts: [{ type: 'text', text: 'Hello' }],
       personaId: 'persona-one',
       signal: new AbortController().signal,
       handlers: {
@@ -37,7 +37,7 @@ describe('persona API client', () => {
     const init = fetchMock.mock.calls[0][1] as RequestInit
     expect(JSON.parse(init.body as string)).toEqual({
       session_id: 'session-one',
-      message: 'Hello',
+      parts: [{ type: 'text', text: 'Hello' }],
       persona_id: 'persona-one',
     })
   })
@@ -60,7 +60,7 @@ describe('persona API client', () => {
 
     await streamChat({
       sessionId: 'session-one',
-      message: 'Hello',
+      parts: [{ type: 'text', text: 'Hello' }],
       personaId: null,
       signal: new AbortController().signal,
       handlers: {
@@ -73,7 +73,7 @@ describe('persona API client', () => {
     const init = fetchMock.mock.calls[0][1] as RequestInit
     expect(JSON.parse(init.body as string)).toEqual({
       session_id: 'session-one',
-      message: 'Hello',
+      parts: [{ type: 'text', text: 'Hello' }],
     })
   })
 

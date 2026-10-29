@@ -1,4 +1,5 @@
 import type {
+  ContentPart,
   ChatHistoryResponse,
   ChatSessionListResponse,
   ChatSessionSummary,
@@ -165,7 +166,7 @@ interface StreamHandlers {
 
 interface StreamChatOptions {
   sessionId: string
-  message: string
+  parts: ContentPart[]
   personaId?: string | null
   signal: AbortSignal
   handlers: StreamHandlers
@@ -173,7 +174,7 @@ interface StreamChatOptions {
 
 export async function streamChat({
   sessionId,
-  message,
+  parts,
   personaId,
   signal,
   handlers,
@@ -186,7 +187,7 @@ export async function streamChat({
     },
     body: JSON.stringify({
       session_id: sessionId,
-      message,
+      parts,
       ...(personaId ? { persona_id: personaId } : {}),
     }),
     signal,

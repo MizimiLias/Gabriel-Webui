@@ -78,8 +78,35 @@ describe('new chat persona selection', () => {
     await waitFor(() => {
       expect(mockStream).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: 'Hello',
+          parts: [{ type: 'text', text: 'Hello' }],
           personaId: 'persona-one',
+        }),
+      )
+    })
+  })
+
+  it('sends text and image URL content parts', async () => {
+    const user = userEvent.setup()
+    renderChat()
+
+    await user.type(screen.getByPlaceholderText('给 Gabriel 发消息…'), 'Describe this')
+    await user.type(
+      screen.getByLabelText('https://example.com/image.png'),
+      'https://example.com/image.png',
+    )
+    await user.click(screen.getByRole('button', { name: '添加图片 URL' }))
+    await user.click(screen.getByRole('button', { name: '发送消息' }))
+
+    await waitFor(() => {
+      expect(mockStream).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parts: [
+            { type: 'text', text: 'Describe this' },
+            {
+              type: 'image_url',
+              image_url: { url: 'https://example.com/image.png' },
+            },
+          ],
         }),
       )
     })

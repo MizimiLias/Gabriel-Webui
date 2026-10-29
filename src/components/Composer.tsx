@@ -1,11 +1,14 @@
-import { useEffect, useRef, type KeyboardEvent } from 'react'
-import { ArrowUp, Square } from 'lucide-react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { ArrowUp, ImagePlus, Square, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAppSettings } from '../contexts/app-settings'
 
 interface ComposerProps {
   value: string
   onChange: (value: string) => void
+  imageUrls: string[]
+  onAddImageUrl: (url: string) => void
+  onRemoveImageUrl: (url: string) => void
   onSend: () => void
   onStop: () => void
   isStreaming: boolean
@@ -16,13 +19,41 @@ const MAX_LENGTH = 32_000
 export function Composer({
   value,
   onChange,
+  imageUrls,
+  onAddImageUrl,
+  onRemoveImageUrl,
   onSend,
   onStop,
   isStreaming,
 }: ComposerProps) {
   const { t } = useAppSettings()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const canSend = value.trim().length > 0 && value.length <= MAX_LENGTH
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const [imageUrl, setImageUrl] = useState('')
+  const [imageError, setImageError] = useState<string | null>(null)
+  const canSend =
+    (value.trim().length > 0 || imageUrls.length > 0) && value.length <= MAX_LENGTH
+
+  const addImageUrl = () => {
+    const normalized = imageUrl.trim()
+    if (!normalized) {
+      return
+    }
+    try {
+      const parsed = new URL(normalized)
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error('unsupported protocol')
+      }
+    } catch {
+      setImageError(t('imageUrlInvalid'))
+      return
+    }
+    if (!imageUrls.includes(normalized)) {
+      onAddImageUrl(normalized)
+    }
+    setImageUrl('')
+    setImageError(null)
+  }
 
   useEffect(() => {
     const textarea = textareaRef.current
@@ -54,6 +85,29 @@ export function Composer({
           isStreaming && 'border-[var(--gold)]/45',
         )}
       >
+        {imageUrls.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {imageUrls.map((url) => (
+              <span
+                key={url}
+                className="inline-flex max-w-full items-center gap-1 rounded-md border border-[var(--liquid-border)] bg-[var(--surface-soft)] px-2 py-1 text-xs text-[var(--muted)]"
+                title={url}
+              >
+                <ImagePlus size={13} aria-hidden="true" />
+                <span className="max-w-56 truncate">{url}</span>
+                <button
+                  type="button"
+                  onClick={() => onRemoveImageUrl(url)}
+                  className="rounded p-0.5 hover:bg-[var(--surface-strong)] hover:text-[var(--ink)]"
+                  aria-label={t('removeImageUrl')}
+                  title={t('removeImageUrl')}
+                >
+                  <X size={13} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
         <textarea
           ref={textareaRef}
           value={value}
@@ -67,7 +121,40 @@ export function Composer({
           aria-label={t('composerPlaceholder')}
         />
         <div className="flex min-h-8 items-end justify-between gap-3 pt-1">
-          <div className="flex min-w-0 gap-2.5 pb-1.5 text-xs text-[var(--muted-soft)]">
+          <div className="flex min-w-0 items-center gap-2.5 pb-1.5 text-xs text-[var(--muted-soft)]">
+            <button
+              type="button"
+              className="inline-flex size-7 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-strong)] hover:text-[var(--ink)]"
+              onClick={() => {
+                if (imageUrl.trim()) {
+                  addImageUrl()
+                } else {
+                  imageInputRef.current?.focus()
+                }
+              }}
+              aria-label={t('addImageUrl')}
+              title={t('addImageUrl')}
+            >
+              <ImagePlus size={16} />
+            </button>
+            <input
+              ref={imageInputRef}
+              type="url"
+              value={imageUrl}
+              onChange={(event) => {
+                setImageUrl(event.target.value)
+                setImageError(null)
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  addImageUrl()
+                }
+              }}
+              placeholder={t('imageUrlPlaceholder')}
+              aria-label={t('imageUrlPlaceholder')}
+              className="w-44 min-w-0 border-0 bg-transparent py-1 text-xs text-[var(--ink)] outline-none placeholder:text-[var(--muted-soft)] sm:w-64"
+            />
             <span className="hidden sm:inline">{t('enterHint')}</span>
             {value.length > 30_000 && (
               <span className="text-[var(--danger)]">
@@ -98,6 +185,11 @@ export function Composer({
             </button>
           )}
         </div>
+        {imageError && (
+          <p className="mt-1 text-xs text-[var(--danger)]" role="alert">
+            {imageError}
+          </p>
+        )}
       </div>
     </div>
   )

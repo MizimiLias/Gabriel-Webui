@@ -3,8 +3,8 @@
 React 19 + TypeScript + Vite frontend for the Gabriel Agent backend. The
 interface provides streaming chat, persistent conversation history, generated
 session titles, inline renaming, persona management and selection, local
-search, responsive navigation, and light/dark/system themes with Chinese and
-English copy.
+search, multimodal text/image-URL messages, responsive navigation, and
+light/dark/system themes with Chinese and English copy.
 
 ## Requirements
 
@@ -47,3 +47,8 @@ pnpm build
 - Theme and language preferences are stored in `localStorage`.
 - Session search runs locally over the complete session list returned by the
   backend.
+- Chat requests use content-part arrays. The composer accepts HTTP(S) image
+  URLs and sends them as OpenAI-compatible `image_url` parts; file uploads are
+  intentionally out of scope.
+- Internal `<system_reminder>` parts are retained in persisted history but
+  filtered from the rendered conversation.

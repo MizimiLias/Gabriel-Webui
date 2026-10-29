@@ -1,9 +1,23 @@
 export type ChatRole = 'user' | 'assistant'
 
+export interface TextPart {
+  type: 'text'
+  text: string
+}
+
+export interface ImageURLPart {
+  type: 'image_url'
+  image_url: {
+    url: string
+  }
+}
+
+export type ContentPart = TextPart | ImageURLPart
+
 export interface ChatMessage {
   id: string
   role: ChatRole
-  content: string
+  parts: ContentPart[]
   created_at: string
   /** Ephemeral thinking trace, only present for the in-progress turn. */
   reasoning?: string
